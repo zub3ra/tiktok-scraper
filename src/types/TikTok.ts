@@ -119,7 +119,7 @@ export interface PostCollector {
     imageUrl?: string;
     webVideoUrl?: string;
     videoUrl: string;
-    videoUrlNoWaterMark: string | null;
+    videoUrlNoWaterMark: string;
     videoMeta: {
         width: number;
         height: number;

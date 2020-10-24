@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /* eslint-disable no-throw-literal */
 /* eslint-disable no-await-in-loop */
 import rp, { OptionsWithUri } from 'request-promise';
@@ -371,7 +370,7 @@ export class TikTokScraper extends EventEmitter {
                 this.collector,
                 5,
                 (item: PostCollector, cb) => {
-                    this.extractVideoId(item)
+                    this.extractVideoId(item.videoUrl)
                         .then(video => {
                             if (video) {
                                 // eslint-disable-next-line no-param-reassign
@@ -393,34 +392,22 @@ export class TikTokScraper extends EventEmitter {
      * @param uri
      */
     // eslint-disable-next-line class-methods-use-this
-    private async extractVideoId(item: PostCollector): Promise<string | null> {
-        // All videos after July 27 2020 do not store unique video id
-        // it means that we can't extract url to the video without the watermark
-        if (item.createTime > 1595808000) {
-            return null;
-        }
+    private async extractVideoId(uri): Promise<string> {
         try {
-            const result = await rp({
-                uri: item.videoUrl,
-                headers: {
-                    'user-agent': 'okhttp',
-                    referer: 'https://www.tiktok.com/',
-                },
-            });
+            const result = await rp({ uri });
             const position = Buffer.from(result).indexOf('vid:');
             if (position !== -1) {
                 const id = Buffer.from(result)
                     .slice(position + 4, position + 36)
                     .toString();
-
                 return `https://api2-16-h2.musical.ly/aweme/v1/play/?video_id=${id}&vr_type=0&is_play_url=1&source=PackSourceEnum_PUBLISH&media_type=4${
                     this.hdVideo ? `&ratio=default&improve_bitrate=1` : ''
                 }`;
             }
-        } catch {
-            // continue regardless of error
+            throw new Error(`Cant extract video id`);
+        } catch (error) {
+            return '';
         }
-        return null;
     }
 
     /**
@@ -1057,10 +1044,6 @@ export class TikTokScraper extends EventEmitter {
         }
         const query = {
             uri: this.input,
-            headers: {
-                'user-agent': 'okhttp',
-                referer: 'https://www.tiktok.com/',
-            },
             method: 'GET',
             json: true,
         };
@@ -1112,7 +1095,6 @@ export class TikTokScraper extends EventEmitter {
                     createTime: videoData.itemInfos.createTime,
                     authorMeta: {
                         id: videoData.itemInfos.authorId,
-                        secUid: videoData.authorInfos.secUid,
                         name: videoData.authorInfos.uniqueId,
                     },
                     musicMeta: {
@@ -1122,7 +1104,7 @@ export class TikTokScraper extends EventEmitter {
                     },
                     imageUrl: videoData.itemInfos.coversOrigin[0],
                     videoUrl: videoData.itemInfos.video.urls[0],
-                    videoUrlNoWaterMark: null,
+                    videoUrlNoWaterMark: '',
                     videoMeta: videoData.itemInfos.video.videoMeta,
                     covers: {
                         default: videoData.itemInfos.covers[0],
@@ -1143,7 +1125,7 @@ export class TikTokScraper extends EventEmitter {
                 } as PostCollector;
 
                 try {
-                    const video = await this.extractVideoId(videoItem);
+                    const video = await this.extractVideoId(videoItem.videoUrl);
                     videoItem.videoUrlNoWaterMark = video;
                 } catch (error) {
                     // continue regardless of error

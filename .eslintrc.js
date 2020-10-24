@@ -29,11 +29,5 @@ module.exports = {
                 '@typescript-eslint/no-unused-vars': [2, { args: 'none' }],
             },
         },
-        {
-          files: ['*.test.ts'],
-          env: {
-            jest: true
-          }
-        }
     ],
 };
